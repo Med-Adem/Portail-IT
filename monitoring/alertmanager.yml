@@ -1,0 +1,19 @@
+global:
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'ola.admin28@gmail.com'
+  smtp_auth_username: 'ola.admin28@gmail.com'
+  smtp_auth_password: 'dntg fxdi gfkq iggj'
+  smtp_require_tls: true
+
+route:
+  receiver: 'email-admin'
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 1h
+
+receivers:
+  - name: 'email-admin'
+    email_configs:
+      - to: 'adem.guendil@gmail.com'
+        send_resolved: true

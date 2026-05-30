@@ -1,0 +1,42 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: monitoring-server-docker-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: monitoring-server-docker
+          vm: monitoring-server
+          __path__: /var/lib/docker/containers/*/*-json.log
+
+  - job_name: monitoring-server-system-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: monitoring-server-system
+          vm: monitoring-server
+          __path__: /var/log/*.log
+
+      - targets:
+          - localhost
+        labels:
+          job: monitoring-server-auth
+          vm: monitoring-server
+          __path__: /var/log/auth.log
+
+      - targets:
+          - localhost
+        labels:
+          job: monitoring-server-syslog
+          vm: monitoring-server
+          __path__: /var/log/syslog

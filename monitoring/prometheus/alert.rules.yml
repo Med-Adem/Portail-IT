@@ -1,0 +1,114 @@
+groups:
+  - name: app-server-alerts
+    rules:
+      - alert: AppServerNodeDown
+        expr: up{job="app-server-node"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          vm: app-server
+        annotations:
+          summary: "App Server indisponible"
+          description: "Le node exporter du serveur applicatif ne répond plus."
+
+      - alert: BackendDown
+        expr: up{job="app-server-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          vm: app-server
+        annotations:
+          summary: "Backend indisponible"
+          description: "Le backend Spring Boot du portail est inaccessible."
+
+      - alert: AppServerHighCPU
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{job="app-server-node",mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          vm: app-server
+        annotations:
+          summary: "CPU élevé sur app-server"
+          description: "Le CPU du serveur applicatif dépasse 80%."
+
+      - alert: AppServerHighMemory
+        expr: (1 - (node_memory_MemAvailable_bytes{job="app-server-node"} / node_memory_MemTotal_bytes{job="app-server-node"})) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          vm: app-server
+        annotations:
+          summary: "Mémoire élevée sur app-server"
+          description: "La mémoire utilisée sur app-server dépasse 85%."
+
+      - alert: AppServerDiskLow
+        expr: (1 - (node_filesystem_avail_bytes{job="app-server-node",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{job="app-server-node",fstype!~"tmpfs|overlay"})) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          vm: app-server
+        annotations:
+          summary: "Espace disque faible sur app-server"
+          description: "L’espace disque utilisé sur app-server dépasse 90%."
+
+      - alert: HighBackendLatency
+        expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job="app-server-backend"}[5m])) by (le)) > 2
+        for: 5m
+        labels:
+          severity: warning
+          vm: app-server
+        annotations:
+          summary: "Latence backend élevée"
+          description: "Le temps de réponse du backend dépasse 2 secondes."
+
+  - name: monitoring-server-alerts
+    rules:
+      - alert: MonitoringServerNodeDown
+        expr: up{job="monitoring-server-node"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          vm: monitoring-server
+        annotations:
+          summary: "Monitoring Server indisponible"
+          description: "Le node exporter du monitoring-server ne répond plus."
+
+      - alert: PrometheusDown
+        expr: up{job="prometheus-self"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          vm: monitoring-server
+        annotations:
+          summary: "Prometheus indisponible"
+          description: "Prometheus ne répond plus."
+
+      - alert: MonitoringServerHighCPU
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{job="monitoring-server-node",mode="idle"}[5m])) * 100) > 75
+        for: 5m
+        labels:
+          severity: warning
+          vm: monitoring-server
+        annotations:
+          summary: "CPU élevé sur monitoring-server"
+          description: "Le CPU du monitoring-server dépasse 75%."
+
+      - alert: MonitoringServerHighMemory
+        expr: (1 - (node_memory_MemAvailable_bytes{job="monitoring-server-node"} / node_memory_MemTotal_bytes{job="monitoring-server-node"})) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          vm: monitoring-server
+        annotations:
+          summary: "Mémoire élevée sur monitoring-server"
+          description: "La mémoire utilisée sur monitoring-server dépasse 80%."
+
+      - alert: MonitoringServerDiskLow
+        expr: (1 - (node_filesystem_avail_bytes{job="monitoring-server-node",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{job="monitoring-server-node",fstype!~"tmpfs|overlay"})) * 100 > 85
+        for: 5m
+        labels:
+          severity: critical
+          vm: monitoring-server
+        annotations:
+          summary: "Espace disque faible sur monitoring-server"
+          description: "L’espace disque utilisé sur monitoring-server dépasse 85%."

@@ -1,0 +1,39 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://192.168.56.11:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: app-server-containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+
+    pipeline_stages:
+      - docker: {}
+
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'service'
+
+      - target_label: 'vm'
+        replacement: 'app-server'
+
+  - job_name: app-server-auth
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: app-server-auth
+          vm: app-server
+          filename: /var/log/auth.log
+          __path__: /var/log/auth.log

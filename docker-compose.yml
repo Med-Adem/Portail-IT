@@ -1,0 +1,102 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: oetn-mysql
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: oetn_portal
+      MYSQL_USER: adem
+      MYSQL_PASSWORD: adem
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - oetn-network
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: dockerfile
+    container_name: backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/oetn_portal?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: adem
+      SPRING_DATASOURCE_PASSWORD: adem
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - oetn-network
+    restart: unless-stopped
+
+  frontend:
+    build: ./Frontend
+    container_name: frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - oetn-network
+    restart: unless-stopped
+
+  app-node-exporter:
+    image: prom/node-exporter
+    container_name: app-node-exporter
+    command:
+      - --path.rootfs=/host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "9100:9100"
+    networks:
+      - oetn-network
+    restart: unless-stopped
+
+  app-cadvisor:
+    image: gcr.io/cadvisor/cadvisor
+    container_name: app-cadvisor
+    privileged: true
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - oetn-network
+    restart: unless-stopped
+
+  app-promtail:
+    image: grafana/promtail:3.0.0
+    container_name: app-promtail
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./monitoring/promtail/app-promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/log:/var/log:ro
+    networks:
+      - oetn-network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+
+networks:
+  oetn-network:
+    driver: bridge
